@@ -1,6 +1,4 @@
-
-
-function CallToAction() {
+function CallToAction({ onGetRecipe, disabled }) {
   return (
     <div className="flex w-full items-center justify-between gap-4 rounded-md bg-gray-100 p-4">
       <div>
@@ -10,8 +8,14 @@ function CallToAction() {
         </p>
       </div>
       <div>
-        <button className="whitespace-nowrap rounded-md bg-orange-700 px-3 py-2 text-sm text-white hover:bg-orange-600 cursor-pointer">
-          Get a recipe
+        <button
+          type="button"
+          onClick={onGetRecipe}
+          disabled={disabled}
+          className="whitespace-nowrap rounded-md
+           bg-orange-700 px-3 py-2 text-sm text-white hover:bg-orange-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {disabled ? "Generating..." : "Get a recipe"}
         </button>
       </div>
     </div>

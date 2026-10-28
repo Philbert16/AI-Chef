@@ -4,13 +4,60 @@ import CallToAction from "./CallToAction";
 function Main() {
     const [addIngredient, setAddIngredient] = useState([])
     const [newIngredient, setNewIngredient] = useState("")
+    const [recipe, setRecipe] = useState(null)
+    const [error, setError] = useState("")
+    const [isLoading, setIsLoading] = useState(false)
 
     function addMore(e) {
         e.preventDefault()
         if(newIngredient.trim()){
-            setAddIngredient([...addIngredient, newIngredient])
+            setAddIngredient([...addIngredient, newIngredient.trim()])
         }
         setNewIngredient("")
+    }
+
+    async function getRecipe() {
+        setIsLoading(true)
+        setError("")
+        setRecipe(null)
+
+        try {
+            const response = await fetch("/api/recipe", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ingredients: addIngredient }),
+            })
+            const responseText = await response.text()
+            let data = null
+
+            try {
+                data = responseText ? JSON.parse(responseText) : null
+            } catch {
+                throw new Error(
+                    `The recipe server returned an invalid response (HTTP ${response.status}). Start the app with "npm run dev" and check that OpenCode is running.`,
+                )
+            }
+
+            if (!response.ok) {
+                throw new Error(data?.error || `Could not generate a recipe (HTTP ${response.status}).`)
+            }
+
+            if (
+                typeof data?.summary !== "string" ||
+                !Array.isArray(data.instructions) ||
+                data.instructions.length === 0
+            ) {
+                throw new Error(
+                    'The recipe server returned an empty or incomplete response. Check that OpenCode is running and has a model configured.',
+                )
+            }
+
+            setRecipe(data)
+        } catch (requestError) {
+            setError(requestError.message || "Could not generate a recipe. Please try again.")
+        } finally {
+            setIsLoading(false)
+        }
     }
 
   return (     
@@ -46,7 +93,24 @@ function Main() {
                     </ul>
                 </div>
 
-                <CallToAction />
+                <CallToAction onGetRecipe={getRecipe} disabled={isLoading} />
+
+                {isLoading && <p role="status">Generating your recipe...</p>}
+                {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+
+                {recipe && (
+                    <section className="text-left" aria-live="polite">
+                        <h1 className="text-xl font-bold">Suggested Recipe</h1>
+                        <p className="mt-2 text-gray-700">{recipe.summary}</p>
+
+                        <h1 className="mt-5 text-xl font-bold">Instruction</h1>
+                        <ol className="mt-2 list-decimal space-y-2 pl-5">
+                            {recipe.instructions.map((step, index) => (
+                                <li key={index}>{step}</li>
+                            ))}
+                        </ol>
+                    </section>
+                )}
             </>
             }
         </div>
